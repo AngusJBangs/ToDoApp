@@ -1,0 +1,27 @@
+curl http://localhost:8080/delete/leavethehouse \
+     --include \
+     --header "Content-Type: application/json" \
+     --request "POST" \
+     --data '{}'
+
+curl http://localhost:8080/todo/leavethehouse
+
+curl http://localhost:8080/todos
+
+curl http://localhost:8080/delete/leavethehouse \
+     --include \
+     --header "Content-Type: application/json" \
+     --request "POST" \
+     --data '{}'
+
+curl http://localhost:8080/create \
+    --include \
+    --header "Content-Type: application/json" \
+    --request "POST" \
+    --data '{"Title":"A new to-do","Description":"A description of the new to do", "Due":"2024 08 29 17", "Priority":4,"Status":"not started"}'
+
+curl http://localhost:8080/update/leavethehouse \
+    --include \
+    --header "Content-Type: application/json" \
+    --request "POST" \
+    --data '{"Title":"A new to-do","Description":"A description of the new to do", "Due":"2024 08 29 17", "Priority":4,"Status":"not started"}'
