@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +20,7 @@ func Test_readAll_HappyPath(t *testing.T) {
 	initialToDos := []ToDo{
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(ToDo{}, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(ToDo{}, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("GET", ToDoRequest{}, []gin.Param{}, response)
 
@@ -50,7 +49,7 @@ func Test_read_HappyPath(t *testing.T) {
 	initialToDos := []ToDo{
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(ToDo{}, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(ToDo{}, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("GET", ToDoRequest{}, []gin.Param{{Key: "title", Value: "cleanroom"}}, response)
 
@@ -73,7 +72,7 @@ func Test_read_404TitleNotFound(t *testing.T) {
 	initialToDos := []ToDo{
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(ToDo{}, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(ToDo{}, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("GET", ToDoRequest{}, []gin.Param{{Key: "title", Value: "slackOff"}}, response)
 
@@ -88,7 +87,7 @@ func Test_delete_HappyPath(t *testing.T) {
 	initialToDos := []ToDo{
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(ToDo{}, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(ToDo{}, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{}, []gin.Param{{Key: "title", Value: "CleanCar"}}, response)
 
@@ -109,7 +108,7 @@ func Test_delete_404TitleNotFound(t *testing.T) {
 	initialToDos := []ToDo{
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(ToDo{}, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(ToDo{}, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{}, []gin.Param{{Key: "title", Value: "takeItEasy"}}, response)
 
@@ -125,7 +124,7 @@ func Test_update_HappyPath(t *testing.T) {
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
 	expected := ToDo{"Clean room", "an updated description", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(expected, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(expected, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{"Clean room", "an updated description", "2024 9 15 12", 2, "not started"}, []gin.Param{{Key: "title", Value: "Clean Room"}}, response)
 
@@ -150,7 +149,7 @@ func Test_update_404TitleNotFound(t *testing.T) {
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
 	expected := ToDo{"Clean room", "an updated description", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(expected, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(expected, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{"Clean room", "an updated description", "2024 9 15 12", 2, "not started"}, []gin.Param{{Key: "title", Value: "SnoozeAlarm"}}, response)
 
@@ -166,7 +165,7 @@ func Test_update_409TitleAlreadyExists(t *testing.T) {
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
 	expected := ToDo{"Clean car", "an updated description", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(expected, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(expected, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{"Clean Car", "an updated description", "2024 9 15 12", 2, "not started"}, []gin.Param{{Key: "title", Value: "cleanRoom"}}, response)
 
@@ -181,7 +180,7 @@ func Test_update_400BadRequest(t *testing.T) {
 	initialToDos := []ToDo{
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(ToDo{}, errors.New("an error message"))}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(ToDo{}, errors.New("an error message"))}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{}, []gin.Param{}, response)
 
@@ -190,7 +189,6 @@ func Test_update_400BadRequest(t *testing.T) {
 	if response.Code != 400 {
 		t.Error("Expected response to be 400 but was actually", response.Code)
 	}
-	fmt.Println(response.Body)
 	if m := strings.Split(response.Body.String(), `"`)[3]; m != "an error message" {
 		t.Error(`Expected response message to be "an error message" but was actually`, m)
 	}
@@ -201,7 +199,7 @@ func Test_create_HappyPath(t *testing.T) {
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
 	expected := ToDo{"new title", "new description", time.Date(2024, 1, 1, 1, 0, 0, 0, time.Local), 1, "not started"}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(expected, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(expected, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{"new title", "new description", "2024 1 1 1", 1, "not started"}, []gin.Param{}, response)
 
@@ -229,7 +227,7 @@ func Test_create_409TitleAlreadyExists(t *testing.T) {
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
 	expected := ToDo{"clean room", "new description", time.Date(2024, 1, 1, 1, 0, 0, 0, time.Local), 1, "not started"}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(expected, nil)}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(expected, nil)}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{"clean room", "new description", "2024 1 1 1", 1, "not started"}, []gin.Param{}, response)
 
@@ -244,7 +242,7 @@ func Test_create_400BadRequest(t *testing.T) {
 	initialToDos := []ToDo{
 		{"Clean room", "Do laundry, hoover, clean sheets, change bin", time.Date(2024, 9, 15, 12, 0, 0, 0, time.Local), 2, "not started"},
 		{"Clean car", "Remove mess, hoover, wash outside", time.Date(2024, 9, 12, 12, 0, 0, 0, time.Local), 4, "not started"}}
-	server := Server{&sync.RWMutex{}, initialToDos, MockDecodeToDo(ToDo{}, errors.New("missing data"))}
+	server := Server{&sync.RWMutex{}, initialToDos, StubDecodeToDo(ToDo{}, errors.New("missing data"))}
 	response := httptest.NewRecorder()
 	c := MockCustomContext("POST", ToDoRequest{}, []gin.Param{}, response)
 
@@ -276,7 +274,7 @@ func MockCustomContext(methodType string, tdr ToDoRequest, p []gin.Param, w *htt
 	return c
 }
 
-func MockDecodeToDo(td ToDo, err error) func(c *gin.Context) (ToDo, error) {
+func StubDecodeToDo(td ToDo, err error) func(c *gin.Context) (ToDo, error) {
 	return func(c *gin.Context) (ToDo, error) {
 		return td, err
 	}

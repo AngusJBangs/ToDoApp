@@ -65,6 +65,18 @@ func Test_decodeToDo_ErrorsWhenInputInvalid(t *testing.T) {
 	AssertError(err, "missing data", t)
 }
 
+func FuzzDecodeToDo(f *testing.F) {
+	f.Add("title", "description", "2024 8 6 4", 4, "not started")
+	f.Fuzz(func(t *testing.T, title string, description string, due string, priority int, status string) {
+		c := MockPostContext(ToDoRequest{title, description, due, priority, status})
+		_, err := DecodeToDo(c)
+		if err != nil {
+			t.Skip("invalid entry")
+		}
+		t.Skip("valid entry")
+	})
+}
+
 func AssertError(err error, expectedErrorMessage string, t *testing.T) {
 	if err == nil {
 		t.Error("Expected error with message:'", expectedErrorMessage, "' but no error recieved")

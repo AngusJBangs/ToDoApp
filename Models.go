@@ -19,7 +19,7 @@ type ToDoRequest struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Due         string `json:"due"`
-	Priority    int    `json:"priortiy"`
+	Priority    int    `json:"priority"`
 	Status      string `json:"status"`
 }
 
