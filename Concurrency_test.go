@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 )
 
 func Test_Concurrency(t *testing.T) {
@@ -16,7 +15,6 @@ func Test_Concurrency(t *testing.T) {
 	errorMessages := make(chan string)
 
 	requests, wg := GenerateRequests(initialToDos, errorMessages)
-	time.Sleep(time.Second * 2)
 
 	for _, r := range requests {
 		go r()
@@ -31,21 +29,21 @@ func Test_Concurrency(t *testing.T) {
 	}
 }
 
-func GenerateRequests(toDos []ToDo, errs chan<- string) ([]func(), *sync.WaitGroup) {
+func GenerateRequests(toDos []ToDo, errorMessage chan<- string) ([]func(), *sync.WaitGroup) {
 	var requests []func()
 	var wg sync.WaitGroup
 	for i := 0; i < 5; i++ {
 		wg.Add(5)
-		requests = append(requests, ReadAllRequest(&wg, errs))
-		requests = append(requests, ReadRequest(toDos[i].Title, &wg, errs))
-		requests = append(requests, UpdateRequest(toDos[i].Title, "New description "+strconv.Itoa(i), &wg, errs))
-		requests = append(requests, CreateRequest("New title "+strconv.Itoa(i+10), "New description "+strconv.Itoa(i+10), &wg, errs))
-		requests = append(requests, DeleteRequest(toDos[i+5].Title, &wg, errs))
+		requests = append(requests, ReadAllRequest(&wg, errorMessage))
+		requests = append(requests, ReadRequest(toDos[i].Title, &wg, errorMessage))
+		requests = append(requests, UpdateRequest(toDos[i].Title, "New description "+strconv.Itoa(i), &wg, errorMessage))
+		requests = append(requests, CreateRequest("New title "+strconv.Itoa(i+10), "New description "+strconv.Itoa(i+10), &wg, errorMessage))
+		requests = append(requests, DeleteRequest(toDos[i+5].Title, &wg, errorMessage))
 	}
 	return requests, &wg
 }
 
-func ReadAllRequest(wg *sync.WaitGroup, errs chan<- string) func() {
+func ReadAllRequest(wg *sync.WaitGroup, errorMessage chan<- string) func() {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "http://localhost:8080/todos", nil)
 	if err != nil {
@@ -55,12 +53,12 @@ func ReadAllRequest(wg *sync.WaitGroup, errs chan<- string) func() {
 		defer wg.Done()
 		result, _ := client.Do(req)
 		if result.Status != "200 OK" {
-			errs <- result.Status
+			errorMessage <- result.Status + " for http://localhost:8080/todos"
 		}
 	}
 }
 
-func ReadRequest(title string, wg *sync.WaitGroup, errs chan<- string) func() {
+func ReadRequest(title string, wg *sync.WaitGroup, errorMessage chan<- string) func() {
 	client := &http.Client{}
 	link := "http://localhost:8080/todo/" + strings.ReplaceAll(title, " ", "")
 	req, err := http.NewRequest("GET", link, nil)
@@ -71,11 +69,11 @@ func ReadRequest(title string, wg *sync.WaitGroup, errs chan<- string) func() {
 		defer wg.Done()
 		result, _ := client.Do(req)
 		if result.Status != "200 OK" {
-			errs <- result.Status
+			errorMessage <- result.Status + " for " + link
 		}
 	}
 }
-func UpdateRequest(title string, newDescription string, wg *sync.WaitGroup, errs chan<- string) func() {
+func UpdateRequest(title string, newDescription string, wg *sync.WaitGroup, errorMessage chan<- string) func() {
 	client := &http.Client{}
 	data := strings.NewReader(`{"Title":"` + title + `","Description":"` + newDescription + `", "Due":"2024 08 29 17", "Priority":4,"Status":"not started"}`)
 	link := "http://localhost:8080/update/" + strings.ReplaceAll(title, " ", "")
@@ -88,11 +86,11 @@ func UpdateRequest(title string, newDescription string, wg *sync.WaitGroup, errs
 		defer wg.Done()
 		result, _ := client.Do(req)
 		if result.Status != "200 OK" {
-			errs <- result.Status
+			errorMessage <- result.Status + " for " + link + " with title: <" + title + "> and description: <" + newDescription + ">"
 		}
 	}
 }
-func CreateRequest(newTitle string, newDescription string, wg *sync.WaitGroup, errs chan<- string) func() {
+func CreateRequest(newTitle string, newDescription string, wg *sync.WaitGroup, errorMessage chan<- string) func() {
 	client := &http.Client{}
 	data := strings.NewReader(`{"Title":"` + newTitle + `","Description":"` + newDescription + `", "Due":"2024 08 29 17", "Priority":4,"Status":"not started"}`)
 	link := "http://localhost:8080/create"
@@ -105,11 +103,11 @@ func CreateRequest(newTitle string, newDescription string, wg *sync.WaitGroup, e
 		defer wg.Done()
 		result, _ := client.Do(req)
 		if result.Status != "200 OK" {
-			errs <- result.Status
+			errorMessage <- result.Status + " for " + link + " with title: <" + newTitle + "> and description: <" + newDescription + ">"
 		}
 	}
 }
-func DeleteRequest(title string, wg *sync.WaitGroup, errs chan<- string) func() {
+func DeleteRequest(title string, wg *sync.WaitGroup, errorMessage chan<- string) func() {
 	client := &http.Client{}
 	link := "http://localhost:8080/delete/" + strings.ReplaceAll(title, " ", "")
 	req, err := http.NewRequest("POST", link, nil)
@@ -121,7 +119,7 @@ func DeleteRequest(title string, wg *sync.WaitGroup, errs chan<- string) func() 
 		defer wg.Done()
 		result, _ := client.Do(req)
 		if result.Status != "200 OK" {
-			errs <- result.Status
+			errorMessage <- result.Status + " for " + link
 		}
 	}
 
