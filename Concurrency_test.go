@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ToDoApp/models"
 	"log"
 	"net/http"
 	"strconv"
@@ -29,7 +30,7 @@ func Test_Concurrency(t *testing.T) {
 	}
 }
 
-func GenerateRequests(toDos []ToDo, errorMessage chan<- string) ([]func(), *sync.WaitGroup) {
+func GenerateRequests(toDos []models.ToDo, errorMessage chan<- string) ([]func(), *sync.WaitGroup) {
 	var requests []func()
 	var wg sync.WaitGroup
 	for i := 0; i < 5; i++ {

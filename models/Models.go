@@ -1,10 +1,7 @@
-package main
+package models
 
 import (
-	"sync"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 type ToDo struct {
@@ -21,10 +18,4 @@ type ToDoRequest struct {
 	Due         string `json:"due"`
 	Priority    int    `json:"priority"`
 	Status      string `json:"status"`
-}
-
-type Server struct {
-	l           *sync.RWMutex
-	storedToDos []ToDo
-	DecodeToDo  func(*gin.Context) (ToDo, error)
 }

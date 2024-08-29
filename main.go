@@ -1,23 +1,24 @@
 package main
 
 import (
+	"ToDoApp/handlers"
 	"sync"
 
 	"github.com/gin-gonic/gin"
 )
 
-func initialiseServer() Server {
-	return Server{&sync.RWMutex{}, MakeSampleToDos(), DecodeToDo}
+func initialiseServer() handlers.Server {
+	return handlers.Server{L: &sync.RWMutex{}, StoredToDos: MakeSampleToDos(), DecodeToDo: DecodeToDo}
 }
 
 func main() {
 	server := initialiseServer()
 	router := gin.Default()
-	router.GET("/todos", server.readAll)
-	router.GET("/todo/:title", server.read)
-	router.POST("/create", server.create)
-	router.POST("/update/:title", server.update)
-	router.POST("/delete/:title", server.delete)
+	router.GET("/todos", server.ReadAll)
+	router.GET("/todo/:title", server.Read)
+	router.POST("/create", server.Create)
+	router.POST("/update/:title", server.Update)
+	router.POST("/delete/:title", server.Delete)
 
 	router.Run("localhost:8080")
 }
