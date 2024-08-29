@@ -15,6 +15,11 @@ Concurrency tests will only pass if the data is the initial sample data. Restart
 
 Sample commands to interact with the Api can be found in commands.txt
 
+## Version with channels instead of mutex
+
+Available on `Channels` branch
+Unit tests don't work on this branch but concurrency test does.
+
 ## Webapp to consume APi
 
 `https://github.com/AngusJBangs/webapp`
