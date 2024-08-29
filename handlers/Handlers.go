@@ -2,58 +2,116 @@ package handlers
 
 import (
 	"ToDoApp/models"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-func (s *Server) ReadAll(c *gin.Context) {
-	s.L.RLock()
-	defer s.L.RUnlock()
-	c.IndentedJSON(http.StatusOK, s.StoredToDos)
+type CommandType int
+
+const (
+	ReadAllCommand = iota
+	ReadCommand
+	UpdateCommand
+	CreateCommand
+	DeleteCommand
+)
+
+type indentedJsonResponse struct {
+	httpstatus int
+	response   any
 }
-func (s *Server) Read(c *gin.Context) {
+
+type Command struct {
+	ty        CommandType
+	c         *gin.Context
+	replyChan chan indentedJsonResponse
+}
+
+func (s *Server) InitiateToDoHandlerManager() chan<- Command {
+	cmds := make(chan Command)
+
+	go func() {
+		for cmd := range cmds {
+			switch cmd.ty {
+			case ReadAllCommand:
+				cmd.replyChan <- s.readAll()
+			case ReadCommand:
+				cmd.replyChan <- s.read(cmd.c)
+			case UpdateCommand:
+				cmd.replyChan <- s.update(cmd.c)
+			case DeleteCommand:
+				cmd.replyChan <- s.delete(cmd.c)
+			case CreateCommand:
+				cmd.replyChan <- s.create(cmd.c)
+			}
+		}
+	}()
+
+	return cmds
+}
+
+func (s *Server) StartReadAll(c *gin.Context) {
+	replyChan := make(chan indentedJsonResponse)
+	s.Cmds <- Command{ty: ReadAllCommand, c: c, replyChan: replyChan}
+	fmt.Println("waiting for reply")
+	response := <-replyChan
+	c.IndentedJSON(response.httpstatus, response.response)
+}
+func (s *Server) readAll() indentedJsonResponse {
+	return indentedJsonResponse{http.StatusOK, s.StoredToDos}
+}
+func (s *Server) StartRead(c *gin.Context) {
+	replyChan := make(chan indentedJsonResponse)
+	s.Cmds <- Command{ty: ReadCommand, c: c, replyChan: replyChan}
+	response := <-replyChan
+	c.IndentedJSON(response.httpstatus, response.response)
+}
+func (s *Server) read(c *gin.Context) indentedJsonResponse {
 	title := c.Param("title")
-	s.L.RLock()
-	defer s.L.RUnlock()
 	for _, td := range s.StoredToDos {
 		if strings.EqualFold(strings.ReplaceAll(td.Title, " ", ""), strings.ReplaceAll(title, " ", "")) {
-			c.IndentedJSON(http.StatusOK, td)
-			return
+			return indentedJsonResponse{http.StatusOK, td}
 		}
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "to-do not found"})
+	return indentedJsonResponse{http.StatusNotFound, gin.H{"message": "to-do not found"}}
 }
-func (s *Server) Create(c *gin.Context) {
+func (s *Server) StartCreate(c *gin.Context) {
+	replyChan := make(chan indentedJsonResponse)
+	s.Cmds <- Command{ty: CreateCommand, c: c, replyChan: replyChan}
+	response := <-replyChan
+	c.IndentedJSON(response.httpstatus, response.response)
+}
+func (s *Server) create(c *gin.Context) indentedJsonResponse {
 	newToDo, err := s.DecodeToDo(c)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
+		return indentedJsonResponse{http.StatusBadRequest, gin.H{"message": err.Error()}}
 	}
-	s.L.Lock()
-	defer s.L.Unlock()
 	for _, td := range s.StoredToDos {
 		if strings.EqualFold(strings.ReplaceAll(td.Title, " ", ""), strings.ReplaceAll(newToDo.Title, " ", "")) {
-			c.IndentedJSON(http.StatusConflict, gin.H{"message": "To do with that title already exists"})
-			return
+			return indentedJsonResponse{http.StatusConflict, gin.H{"message": "To do with that title already exists"}}
 		}
 	}
 	s.StoredToDos = append(s.StoredToDos, newToDo)
-	c.IndentedJSON(http.StatusOK, gin.H{"message": "to do added"})
+	return indentedJsonResponse{http.StatusOK, gin.H{"message": "to do added"}}
 }
-func (s *Server) Update(c *gin.Context) {
+func (s *Server) StartUpdate(c *gin.Context) {
+	replyChan := make(chan indentedJsonResponse)
+	s.Cmds <- Command{ty: UpdateCommand, c: c, replyChan: replyChan}
+	response := <-replyChan
+	c.IndentedJSON(response.httpstatus, response.response)
+}
+func (s *Server) update(c *gin.Context) indentedJsonResponse {
 	title := c.Param("title")
 	newToDo, err := s.DecodeToDo(c)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
+		return indentedJsonResponse{http.StatusBadRequest, gin.H{"message": err.Error()}}
 	}
 	titleSame := strings.EqualFold(strings.ReplaceAll(newToDo.Title, " ", ""), strings.ReplaceAll(title, " ", ""))
 	foundAt := -1
 	var alreadyExists bool
-	s.L.Lock()
-	defer s.L.Unlock()
 	for i, td := range s.StoredToDos {
 		if !titleSame && strings.EqualFold(strings.ReplaceAll(td.Title, " ", ""), strings.ReplaceAll(newToDo.Title, " ", "")) {
 			alreadyExists = true
@@ -63,20 +121,22 @@ func (s *Server) Update(c *gin.Context) {
 		}
 	}
 	if foundAt < 0 {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "to-do not found"})
-		return
+		return indentedJsonResponse{http.StatusNotFound, gin.H{"message": "to-do not found"}}
 	}
 	if alreadyExists {
-		c.IndentedJSON(http.StatusConflict, newToDo)
-		return
+		return indentedJsonResponse{http.StatusConflict, newToDo}
 	}
 	s.StoredToDos[foundAt] = newToDo
-	c.IndentedJSON(http.StatusOK, newToDo)
+	return indentedJsonResponse{http.StatusOK, newToDo}
 }
-func (s *Server) Delete(c *gin.Context) {
+func (s *Server) StartDelete(c *gin.Context) {
+	replyChan := make(chan indentedJsonResponse)
+	s.Cmds <- Command{ty: DeleteCommand, c: c, replyChan: replyChan}
+	response := <-replyChan
+	c.IndentedJSON(response.httpstatus, response.response)
+}
+func (s *Server) delete(c *gin.Context) indentedJsonResponse {
 	title := c.Param("title")
-	s.L.Lock()
-	defer s.L.Unlock()
 	tds := append([]models.ToDo{}, s.StoredToDos...)
 	for i, td := range s.StoredToDos {
 		if strings.EqualFold(strings.ReplaceAll(td.Title, " ", ""), strings.ReplaceAll(title, " ", "")) {
@@ -86,9 +146,8 @@ func (s *Server) Delete(c *gin.Context) {
 				after = tds[i+1:]
 			}
 			s.StoredToDos = append(before, after...)
-			c.IndentedJSON(http.StatusOK, gin.H{"message": "to-do deleted"})
-			return
+			return indentedJsonResponse{http.StatusOK, gin.H{"message": "to-do deleted"}}
 		}
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "to-do not found"})
+	return indentedJsonResponse{http.StatusNotFound, gin.H{"message": "to-do not found"}}
 }
