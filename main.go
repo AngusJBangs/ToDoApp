@@ -2,13 +2,14 @@ package main
 
 import (
 	"ToDoApp/handlers"
+	"ToDoApp/utilities"
 	"sync"
 
 	"github.com/gin-gonic/gin"
 )
 
 func initialiseServer() handlers.Server {
-	return handlers.Server{L: &sync.RWMutex{}, StoredToDos: MakeSampleToDos(), DecodeToDo: DecodeToDo}
+	return handlers.Server{L: &sync.RWMutex{}, StoredToDos: utilities.MakeSampleToDos(), DecodeToDo: utilities.DecodeToDo}
 }
 
 func main() {

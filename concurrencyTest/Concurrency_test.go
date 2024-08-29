@@ -1,7 +1,8 @@
-package main
+package concurrencyTets
 
 import (
 	"ToDoApp/models"
+	"ToDoApp/utilities"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,7 +12,7 @@ import (
 )
 
 func Test_Concurrency(t *testing.T) {
-	initialToDos := MakeSampleToDos()
+	initialToDos := utilities.MakeSampleToDos()
 
 	errorMessages := make(chan string)
 
